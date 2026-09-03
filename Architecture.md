@@ -1,0 +1,1 @@
+Data ingestion → Document processing → LLM extraction → Structured data → Tool → Agent
