@@ -1,6 +1,5 @@
 from pathlib import Path
 import time
-from curl_cffi import requests
 
 BASE_URL = (
     "https://cdn.tse.jus.br/estatistica/sead/odsele/"
@@ -14,9 +13,9 @@ UFs = [
     "RO", "RR", "SC", "SP", "SE", "TO"
 ]
 
-def download_certificate(uf: str, session: requests.Session):
+def download_certificate(uf: str, session,
+                         output_dir: Path = Path("data/raw")):
     url = BASE_URL.format(uf)
-    output_dir = Path("data/raw")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_file = output_dir / f"certidao_criminal_2026_{uf}.zip"
 
@@ -43,10 +42,12 @@ def download_certificate(uf: str, session: requests.Session):
 
         response.raise_for_status()
 
-        with open(output_file, "wb") as file:
+        temporary = output_file.with_suffix(output_file.suffix + ".tmp")
+        with open(temporary, "wb") as file:
             for chunk in response.iter_content(chunk_size=1024 * 1024):
                 if chunk:
                     file.write(chunk)
+        temporary.replace(output_file)
 
         print(f"Saved: {output_file}\n")
 
@@ -55,6 +56,7 @@ def download_certificate(uf: str, session: requests.Session):
 
 
 if __name__ == "__main__":
+    from curl_cffi import requests
     # Inicializa sessão com impersonate nativo
     with requests.Session(impersonate="chrome120") as session:
         # Faz uma chamada inicial na raiz para estabelecer contexto de navegação
