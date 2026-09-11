@@ -1,3 +1,12 @@
+# Python 3.11+
+# System dependency (not installed by pip): tesseract-ocr + Portuguese data.
+# Ubuntu/Debian: sudo apt-get install tesseract-ocr tesseract-ocr-por
+
+# Native PDF text extraction, page diagnostics, and rendering for OCR.
 PyMuPDF>=1.26,<2
+
+# Responses API and Batch API.
 openai>=2,<3
+
+# TSE downloads with browser-compatible TLS impersonation.
 curl-cffi>=0.13,<1
