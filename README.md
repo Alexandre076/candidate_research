@@ -1,69 +1,67 @@
-# Candidate Research — certidões criminais do TSE
+# Candidate Research — TSE criminal record certificates
 
-**Idioma:** Português | [English](README.en.md)
+This project downloads criminal record certificates submitted by candidates in
+Brazil's 2026 elections, extracts content from their PDFs, and organizes court
+case mentions by candidate. The pipeline combines native text extraction,
+selective OCR, and semantic analysis with OpenAI models.
 
-Este projeto baixa as certidões criminais apresentadas por candidatos nas eleições
-brasileiras de 2026, extrai o conteúdo dos PDFs e organiza menções processuais por
-candidato. O pipeline combina extração de texto, OCR seletivo e análise semântica
-com modelos da OpenAI.
+The results support questions such as:
 
-O resultado permite responder perguntas como:
+- how many candidates are explicitly associated with criminal case records;
+- how many cases were found per candidate;
+- which procedural classes occur most often;
+- which subjects are mentioned, such as corruption or domestic violence;
+- which document and quoted passage support each extracted field.
 
-- quantos candidatos aparecem relacionados a registros criminais;
-- quantos processos foram encontrados por candidato;
-- quais classes processuais aparecem com maior frequência;
-- quais assuntos são mencionados, como corrupção ou violência doméstica;
-- qual documento e trecho sustentam cada informação extraída.
+A criminal record may be an inquiry, investigation, or case without a judgment.
+A candidate's presence in this dataset does not imply guilt or conviction.
 
-Um registro criminal pode ser inquérito, investigação ou processo sem julgamento.
-A presença de um candidato na base não significa culpa ou condenação.
-
-## Visão geral
+## Overview
 
 ```mermaid
 flowchart LR
-    TSE["Dados abertos do TSE"] --> ZIP["ZIPs por UF"]
-    ZIP --> PDF["12 mil+ PDFs"]
-    PDF --> TEXT["Texto nativo + OCR"]
-    TEXT --> NANO["Triagem com GPT-5.4 nano"]
-    NANO --> MINI["Revisão com GPT-5.4 mini"]
-    MINI --> VALID["Validação de evidências"]
-    VALID --> TABLES["CSV por documento, processo e candidato"]
+    TSE["TSE open data"] --> ZIP["ZIP files by state"]
+    ZIP --> PDF["12,000+ PDFs"]
+    PDF --> TEXT["Native text + OCR"]
+    TEXT --> NANO["Triage with GPT-5.4 nano"]
+    NANO --> MINI["Review with GPT-5.4 mini"]
+    MINI --> VALID["Evidence validation"]
+    VALID --> TABLES["CSVs by document, case, and candidate"]
 ```
 
-O fluxo detalhado, incluindo arquivos intermediários e decisões, está em
-[Architecture.md](Architecture.md).
+See [Architecture.md](Architecture.md) for the detailed flow, intermediate
+artifacts, and decision points.
 
-## Requisitos
+## Requirements
 
-- Python 3.11 ou superior;
-- Tesseract OCR com o idioma português;
-- uma chave da OpenAI API com créditos disponíveis;
-- conexão com a internet para baixar os dados e executar a análise semântica;
-- aproximadamente 7 GB para a execução atual; recomenda-se pelo menos 10 GB livres.
+- Python 3.11 or later;
+- Tesseract OCR with Portuguese language data;
+- an OpenAI API key with available credits;
+- internet access for downloading data and running semantic analysis;
+- about 7 GB for the current dataset; at least 10 GB free is recommended.
 
-Os dados públicos são grandes. Na execução usada para desenvolver o projeto:
+The public dataset is large. The development run used approximately:
 
-| Diretório | Espaço aproximado |
+| Directory | Approximate size |
 |---|---:|
-| ZIPs brutos | 2,9 GB |
-| PDFs descompactados | 2,9 GB |
-| Textos, OCR e resultados | 705 MB |
+| Raw ZIP files | 2.9 GB |
+| Extracted PDFs | 2.9 GB |
+| Text, OCR, and results | 705 MB |
 
-O uso da OpenAI API é cobrado. O valor varia conforme quantidade e tamanho dos
-documentos, preços vigentes, modelo e respostas geradas. Consulte o saldo e os
-limites do projeto antes de iniciar.
+OpenAI API usage is billed. Cost depends on document volume and length, current
+pricing, model selection, and generated output. Check your project balance and
+limits before starting.
 
-## Instalação no Ubuntu, Debian ou GitHub Codespaces
+## Installation on Ubuntu, Debian, or GitHub Codespaces
 
-Abra um terminal na raiz do repositório e instale o Tesseract:
+Open a terminal in the repository root and install Tesseract:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y tesseract-ocr tesseract-ocr-por
 ```
 
-Crie e ative um ambiente virtual Python:
+Create and activate a Python virtual environment:
 
 ```bash
 python3 -m venv .venv
@@ -72,17 +70,17 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Confirme que o idioma português está disponível:
+Confirm that Portuguese is installed:
 
 ```bash
 tesseract --list-langs
 ```
 
-A lista deve conter `por`.
+The output must include `por`.
 
 ### macOS
 
-Com Homebrew:
+Using Homebrew:
 
 ```bash
 brew install python tesseract tesseract-lang
@@ -92,211 +90,211 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-No Windows, recomenda-se usar WSL com uma distribuição Ubuntu e seguir as
-instruções para Ubuntu acima.
+On Windows, WSL with Ubuntu is recommended. Follow the Ubuntu instructions above
+inside WSL.
 
-## Configuração da OpenAI API
+## OpenAI API configuration
 
-Copie o arquivo de exemplo:
+Copy the example environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-Abra `.env` e preencha:
+Open `.env` and set:
 
 ```dotenv
-OPENAI_API_KEY=adicione_sua_chave_aqui
+OPENAI_API_KEY=replace_with_your_key
 ```
 
-Não publique essa chave. O arquivo `.env` está listado no `.gitignore` e não deve
-ser enviado ao Git. Também é possível configurar a chave somente no terminal:
+Never publish this key. `.env` is listed in `.gitignore` and must not be committed.
+You may instead configure the key in the current terminal:
 
 ```bash
-export OPENAI_API_KEY="adicione_sua_chave_aqui"
+export OPENAI_API_KEY="replace_with_your_key"
 ```
 
-A variável exportada tem prioridade sobre o conteúdo do `.env`.
+An exported variable takes precedence over `.env`.
 
-## Executar todo o pipeline
+## Run the complete pipeline
 
-Com o ambiente virtual ativo, execute na raiz do projeto:
-
-```bash
-python src/tse/run_pipeline.py
-```
-
-O comando executa ou retoma automaticamente:
-
-1. download dos 27 ZIPs de certidões do TSE;
-2. download do cadastro de candidatos de 2026;
-3. descompactação dos PDFs por UF;
-4. extração de texto e diagnóstico das páginas;
-5. associação dos documentos aos candidatos pelo `SQ_CANDIDATO`;
-6. OCR das páginas com texto insuficiente;
-7. triagem completa com GPT-5.4 nano;
-8. revisão dos casos selecionados com GPT-5.4 mini;
-9. reparo síncrono de respostas que excederem o limite de saída;
-10. validação das citações contra o texto de origem;
-11. deduplicação e geração das tabelas.
-
-O processamento com Batch API pode levar várias horas. A janela de processamento
-de cada batch pode chegar a 24 horas.
-
-### Retomar depois de uma interrupção
-
-O pipeline registra o progresso em arquivos locais. Se o terminal fechar ou o
-comando for interrompido com `Ctrl+C`, execute o mesmo comando novamente:
+With the virtual environment active, run this command from the repository root:
 
 ```bash
 python src/tse/run_pipeline.py
 ```
 
-Etapas concluídas são detectadas e ignoradas. PDFs, OCRs e respostas já obtidas não
-são enviados novamente.
+The orchestrator runs or resumes these stages:
 
-### Consultar o estado sem executar etapas
+1. download criminal certificate ZIP files for all 27 Brazilian states;
+2. download the 2026 candidate registry;
+3. extract PDFs into state directories;
+4. extract native text and diagnose each page;
+5. associate documents with candidates through `SQ_CANDIDATO`;
+6. OCR pages with insufficient native text;
+7. triage the full collection with GPT-5.4 nano;
+8. review selected documents with GPT-5.4 mini;
+9. synchronously repair responses that exceed output limits;
+10. validate citations against the source text;
+11. deduplicate records and generate result tables.
+
+Batch API processing can take several hours. Each batch has a completion window
+of up to 24 hours.
+
+### Resume after interruption
+
+The pipeline stores progress in local artifacts. If the terminal closes or you
+stop the command with `Ctrl+C`, run the same command again:
+
+```bash
+python src/tse/run_pipeline.py
+```
+
+Completed stages are detected and skipped. Existing PDFs, OCR results, and API
+responses are not submitted again.
+
+### Check status without running stages
 
 ```bash
 python src/tse/run_pipeline.py status
 ```
 
-Esse comando consulta somente os arquivos locais. Ele não chama a OpenAI API.
+This command reads local files only. It does not call the OpenAI API.
 
-### Usar arquivos brutos já baixados
+### Use previously downloaded files
 
-Para impedir qualquer download do TSE:
+To prevent downloads from TSE:
 
 ```bash
 python src/tse/run_pipeline.py --no-download
 ```
 
-Nesse caso, os 27 ZIPs de certidões e `consulta_cand_2026.zip` devem estar em
+The 27 certificate ZIP files and `consulta_cand_2026.zip` must already exist in
 `src/tse/data/raw/`.
 
-### Ajustar paralelismo e intervalo dos batches
+### Configure local workers and batch polling
 
 ```bash
 python src/tse/run_pipeline.py --workers 4 --interval 60
 ```
 
-- `--workers` controla os processos usados na extração local;
-- `--interval` controla os segundos entre consultas à Batch API.
+- `--workers` controls local PDF extraction processes;
+- `--interval` controls the number of seconds between Batch API checks.
 
-## Onde ficam os resultados
+## Output files
 
-Os resultados consolidados são gravados em:
+Consolidated results are written to:
 
 ```text
 src/tse/data/pipeline/preliminary_results/
 ```
 
-| Arquivo | Conteúdo |
+| File | Contents |
 |---|---|
-| `documents_preliminary.csv` | Classificação e quantidade de registros por documento |
-| `processes_preliminary.csv` | Candidato, processo, papel, classe, assunto, situação, resultado e documento |
-| `candidates_preliminary.csv` | Quantidade de documentos e processos por candidato |
-| `process_types_preliminary.csv` | Classes processuais agrupadas e normalizadas |
-| `crime_subjects_preliminary.csv` | Assuntos criminais agrupados, como corrupção e violência doméstica |
-| `summary.json` | Cobertura e contagens gerais |
-| `CONCLUSAO.md` | Síntese da execução analisada durante o desenvolvimento |
+| `documents_preliminary.csv` | Classification and record count per document |
+| `processes_preliminary.csv` | Candidate, case, role, class, subject, status, outcome, and source document |
+| `candidates_preliminary.csv` | Document and case counts per candidate |
+| `process_types_preliminary.csv` | Grouped and normalized procedural classes |
+| `crime_subjects_preliminary.csv` | Grouped subjects such as corruption and domestic violence |
+| `summary.json` | Coverage and aggregate counts |
+| `CONCLUSAO.md` | Portuguese summary of the development run |
 
-Os CSVs usam UTF-8 com BOM para facilitar a abertura no Excel e em ferramentas
-compatíveis com o padrão brasileiro de caracteres.
+CSV files use UTF-8 with a byte order mark to make Brazilian Portuguese text
+easier to open correctly in Excel.
 
-## Estrutura dos dados intermediários
+## Intermediate data layout
 
 ```text
 src/tse/data/
-├── raw/                         # ZIPs originais
-├── extracted/                   # PDFs separados por UF
+├── raw/                         # Original ZIP files
+├── extracted/                   # PDFs grouped by state
 └── pipeline/
-    ├── texts/                   # Texto nativo por PDF
-    ├── documents/               # Diagnóstico e metadados por PDF
-    ├── ocr/                     # OCR seletivo por página
-    ├── manifest.jsonl           # Índice de documentos
-    ├── candidates.csv           # Vínculo inicial com cadastro TSE
-    ├── batch_stage1_nano_v2/    # Triagem de todos os documentos
-    ├── batch_stage2_mini_v1/    # Revisão dos casos selecionados
-    ├── batch_stage2_repair_v*/  # Reparos de respostas incompletas
-    └── preliminary_results/     # Tabelas consolidadas
+    ├── texts/                   # Native text for each PDF
+    ├── documents/               # PDF diagnostics and metadata
+    ├── ocr/                     # Selective OCR by page
+    ├── manifest.jsonl           # Document index
+    ├── candidates.csv           # Initial TSE candidate association
+    ├── batch_stage1_nano_v2/    # Full collection triage
+    ├── batch_stage2_mini_v1/    # Selected document review
+    ├── batch_stage2_repair_v*/  # Repairs for incomplete responses
+    └── preliminary_results/     # Consolidated tables
 ```
 
-O diretório `src/tse/data/` é ignorado pelo Git porque contém arquivos grandes e
-resultados gerados.
+`src/tse/data/` is excluded from Git because it contains large downloaded and
+generated files.
 
-## Como interpretar as tabelas
+## How to interpret the tables
 
-O pipeline considera um registro para a contagem quando a análise identifica:
+A record is counted when the automated analysis identifies:
 
-- natureza criminal;
-- vínculo explícito entre candidato e processo;
-- evidência literal do processo;
-- evidência literal do vínculo com o candidato.
+- criminal nature;
+- an explicit link between candidate and case;
+- literal evidence for the case;
+- literal evidence for the candidate's involvement.
 
-Os processos numerados são deduplicados pela combinação candidato e número do
-processo. Registros sem número são mantidos separadamente.
+Numbered cases are deduplicated by candidate and case number. Records without a
+number are preserved separately.
 
-Os assuntos podem ser gerais dos autos e não necessariamente imputações
-individualizadas. Recursos, cartas precatórias e autos derivados também podem
-representar desdobramentos do mesmo fato.
+Subjects may apply to the case as a whole and may not be individualized
+allegations against a candidate. Appeals, letters rogatory, and derived cases may
+also represent different procedural stages of the same underlying events.
 
-As saídas recebem o nome `preliminary` porque são resultado de extração automática
-e não passaram por revisão humana individual ou validação jurídica.
+Output names contain `preliminary` because the data was extracted automatically
+and has not undergone individual human or legal review.
 
-## Problemas comuns
+## Troubleshooting
 
 ### `Configure OPENAI_API_KEY no ambiente antes de enviar`
 
-Confira se `.env` existe na raiz e contém exatamente `OPENAI_API_KEY=...`. Não use
-`OPEN_API_KEY`.
+Ensure `.env` exists in the repository root and contains exactly
+`OPENAI_API_KEY=...`. Do not use `OPEN_API_KEY`.
 
 ### `Billing hard limit has been reached`
 
-A conta ou projeto atingiu o limite de cobrança. Ajuste saldo, forma de pagamento
-ou limite do projeto na plataforma OpenAI e execute novamente. O pipeline retomará
-os lotes pendentes.
+Your account or project reached its billing limit. Add credits or change the
+project limit in the OpenAI platform, then run the pipeline again. It will resume
+pending work.
 
 ### `Enqueued token limit reached`
 
-A organização atingiu o limite de tokens em fila. O modo automático espera o lote
-ativo terminar e envia o próximo lote quando houver capacidade.
+The organization reached its queued-token limit. Automatic monitoring waits for
+the active batch to finish and submits the next one when capacity is available.
 
 ### `Instale o idioma português do Tesseract`
 
-No Ubuntu ou Debian:
+Install Portuguese Tesseract data on Ubuntu or Debian:
 
 ```bash
 sudo apt-get install -y tesseract-ocr-por
 ```
 
-### Falta de espaço em disco
+### Insufficient disk space
 
-Libere pelo menos 10 GB antes de uma execução completa. Não apague pastas `batch_*`
-durante uma execução, pois elas contêm recibos necessários para retomada.
+Free at least 10 GB before a complete run. Do not delete `batch_*` directories
+during processing because they contain receipts required for resuming.
 
-### Ver os argumentos disponíveis
+### Display available arguments
 
 ```bash
 python src/tse/run_pipeline.py --help
 ```
 
-## Execução manual e desenvolvimento
+## Manual execution and development
 
-Quem precisar executar etapas isoladas pode consultar:
+For running individual stages, see:
 
-- [Architecture.md](Architecture.md): desenho completo do sistema;
-- [src/tse/PROCESS_EXTRACTION.md](src/tse/PROCESS_EXTRACTION.md): extração e batches;
-- [src/tse/PDF_PROCESSING.md](src/tse/PDF_PROCESSING.md): diagnóstico dos PDFs.
+- [Architecture.md](Architecture.md): full system design;
+- [src/tse/PROCESS_EXTRACTION.md](src/tse/PROCESS_EXTRACTION.md): extraction and batches;
+- [src/tse/PDF_PROCESSING.md](src/tse/PDF_PROCESSING.md): PDF diagnostics.
 
-Para verificar a sintaxe dos scripts:
+Check Python syntax with:
 
 ```bash
 python -m py_compile src/tse/*.py
 ```
 
-## Escopo atual
+## Current scope
 
-O pipeline está configurado para as eleições de **2026**. URLs, nomes de arquivos,
-modelos da OpenAI e preços podem mudar. Para outra eleição, será necessário
-parametrizar o ano nos downloads, no cadastro e no padrão dos documentos.
+The pipeline is configured for the **2026 election**. URLs, file names, OpenAI
+models, and pricing may change. Supporting another election requires making the
+year configurable in downloads, registry handling, and document name parsing.

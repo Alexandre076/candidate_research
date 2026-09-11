@@ -1,7 +1,5 @@
 # Candidate Research — TSE criminal record certificates
 
-**Language:** [Português](README.pt-BR.md) | English
-
 This project downloads criminal record certificates submitted by candidates in
 Brazil's 2026 elections, extracts content from their PDFs, and organizes court
 case mentions by candidate. The pipeline combines native text extraction,
