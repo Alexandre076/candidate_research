@@ -15,7 +15,6 @@ import matplotlib
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.ticker import PercentFormatter
 from wordcloud import WordCloud
 
 
@@ -238,32 +237,45 @@ def regional_chart(candidates, processes, output):
         writer = csv.DictWriter(target, fieldnames=list(region_rows[0]))
         writer.writeheader(); writer.writerows(region_rows)
 
-    fig, ax = plt.subplots(figsize=(11, 6.2))
+    fig, ax = plt.subplots(figsize=(11, 5.8))
     names = [REGION_PT[row['region']] if LANGUAGE == 'pt' else row['region']
              for row in region_rows]
-    analyzed = [row['candidates_analyzed'] for row in region_rows]
-    rates = [row['candidate_rate'] for row in region_rows]
-    records = [row['candidate_case_records'] for row in region_rows]
-    sizes = [180 + value * 1.8 for value in records]
-    ax.scatter(analyzed, rates, s=sizes, color=COLORS['green'], alpha=.72,
-               edgecolor=COLORS['blue'], linewidth=1.5)
-    label_offsets = {
-        tr('South', 'Sul'): (-8, 8),
-        tr('Northeast', 'Nordeste'): (8, 8),
-    }
-    midpoint = (min(analyzed) + max(analyzed)) / 2
-    for name, x, y, record_count in zip(names, analyzed, rates, records):
-        offset = label_offsets.get(name, (-8, 8) if x > midpoint else (8, 8))
-        ax.annotate(f'{name}\n{record_count:,} {tr("records", "registros")}',
-                    (x, y), xytext=offset, textcoords='offset points', fontsize=9,
-                    ha='right' if offset[0] < 0 else 'left')
-    ax.set_title(tr('Regional scale, incidence, and case-record volume',
-                    'Escala, incidência e volume de registros por região'), loc='left')
-    ax.set_xlabel(tr('Candidates analyzed', 'Candidatos analisados'))
-    ax.set_ylabel(tr('Candidates with records', 'Candidatos com registros'))
-    ax.yaxis.set_major_formatter(PercentFormatter(1))
-    ax.grid(True); ax.set_axisbelow(True)
-    ax.margins(x=.06, y=.12)
+    raw_values = [[
+        row['candidates_analyzed'], row['candidates_with_records'],
+        row['candidate_rate'], row['candidate_case_records'],
+    ] for row in region_rows]
+    column_maxima = [max(row[column] for row in raw_values)
+                     for column in range(4)]
+    normalized = [[value / column_maxima[column] if column_maxima[column] else 0
+                   for column, value in enumerate(row)] for row in raw_values]
+    image = ax.imshow(normalized, cmap='YlGnBu', vmin=0, vmax=1, aspect='auto')
+    columns = [
+        tr('Analyzed', 'Analisados'), tr('With records', 'Com registros'),
+        tr('Rate', 'Proporção'), tr('Case records', 'Registros processuais'),
+    ]
+    ax.set_xticks(range(4), columns)
+    ax.set_yticks(range(len(names)), names)
+    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False,
+                   length=0, pad=10)
+    for row_index, values in enumerate(raw_values):
+        for column, value in enumerate(values):
+            label = f'{value:.1%}' if column == 2 else f'{value:,}'
+            color = 'white' if normalized[row_index][column] > .58 else '#172033'
+            ax.text(column, row_index, label, ha='center', va='center',
+                    color=color, fontsize=11, fontweight='bold')
+    for edge in ax.spines.values():
+        edge.set_visible(False)
+    ax.set_xticks([x - .5 for x in range(1, 4)], minor=True)
+    ax.set_yticks([y - .5 for y in range(1, len(names))], minor=True)
+    ax.grid(which='minor', color='white', linewidth=4)
+    ax.tick_params(which='minor', bottom=False, left=False)
+    ax.set_title(tr('Regional comparison', 'Comparação regional'), loc='left', pad=20)
+    colorbar = fig.colorbar(image, ax=ax, fraction=.025, pad=.035)
+    colorbar.set_label(tr('Relative intensity within each indicator',
+                          'Intensidade relativa em cada indicador'))
+    colorbar.set_ticks([0, .5, 1], labels=[tr('Low', 'Baixa'),
+                                           tr('Medium', 'Média'),
+                                           tr('High', 'Alta')])
     save(fig, chart_path(output, '03_regions'))
     return region_rows
 
@@ -366,7 +378,7 @@ def write_html(output, metrics, regions):
     charts = [
         (tr('Document classification', 'Classificação dos documentos'), chart_path(output, '01_document_classification').name),
         (tr('Records per candidate', 'Registros por candidato'), chart_path(output, '02_cases_per_candidate').name),
-        (tr('Regional distribution', 'Distribuição regional'), chart_path(output, '03_regions').name),
+        (tr('Regional heat map', 'Mapa de calor regional'), chart_path(output, '03_regions').name),
         (tr('Criminal subjects', 'Assuntos criminais'), chart_path(output, '04_criminal_subjects').name),
         (tr('Procedural classes', 'Classes processuais'), chart_path(output, '05_process_types').name),
         (tr('Candidates by associated case records', 'Candidatos por registros associados'), chart_path(output, '06_candidates_by_case_records').name),
