@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import tempfile
+import textwrap
 import unicodedata
 
 os.environ.setdefault('MPLCONFIGDIR', str(Path(tempfile.gettempdir()) /
@@ -16,6 +17,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+import squarify
 from wordcloud import WordCloud
 
 
@@ -307,15 +309,33 @@ def process_type_chart(types, output):
     rows = [row for row in types if row['fonte'] == 'revisado_mini']
     rows.sort(key=lambda row: integer(row['relacoes_candidato_processo']), reverse=True)
     rows = rows[:14]
-    lollipop_chart([(row['tipo_normalizado'] if LANGUAGE == 'pt' else
-                      TYPE_LABELS.get(row['tipo_normalizado'],
-                                      row['tipo_normalizado'])) for row in rows],
-                    [integer(row['relacoes_candidato_processo']) for row in rows],
-                    tr('Most frequent procedural classes',
-                       'Classes processuais mais frequentes'),
-                    tr('Candidate–case records', 'Relações candidato–processo'),
-                    chart_path(output, '05_process_types'),
-                    COLORS['yellow'])
+    labels = [(row['tipo_normalizado'] if LANGUAGE == 'pt' else
+               TYPE_LABELS.get(row['tipo_normalizado'], row['tipo_normalizado']))
+              for row in rows]
+    values = [integer(row['relacoes_candidato_processo']) for row in rows]
+    colors = []
+    for row in rows:
+        name = normalized_token(row['tipo_normalizado'])
+        if 'acao penal' in name or 'queixa' in name:
+            colors.append('#D1495B')
+        elif 'inquerito' in name or 'investig' in name:
+            colors.append('#38A3A5')
+        elif 'recurso' in name:
+            colors.append('#22577A')
+        elif any(term in name for term in ('carta', 'peticao', 'representacao')):
+            colors.append('#F4B942')
+        else:
+            colors.append('#64748B')
+    display_labels = [f'{textwrap.fill(label, 24)}\n{value:,}'
+                      for label, value in zip(labels, values)]
+    fig, ax = plt.subplots(figsize=(12, 7.2))
+    squarify.plot(sizes=values, label=display_labels, color=colors, alpha=.9,
+                  pad=True, ax=ax, text_kwargs={'fontsize': 8.5, 'color': 'white',
+                                                'fontweight': 'bold'})
+    ax.axis('off')
+    ax.set_title(tr('Most frequent procedural classes',
+                    'Classes processuais mais frequentes'), loc='left', pad=16)
+    save(fig, chart_path(output, '05_process_types'))
 
 
 def candidate_names_chart(candidates, output):
@@ -326,12 +346,29 @@ def candidate_names_chart(candidates, output):
             rows.append((count, f'{row["nome"].title()} ({row["uf"]})'))
     rows.sort(key=lambda item: (-item[0], item[1]))
     rows = rows[:20]
-    lollipop_chart([label for _, label in rows], [count for count, _ in rows],
-                    tr('Candidates with the most associated case records',
-                       'Candidatos com mais registros processuais associados'),
-                    tr('Distinct case records from automated extraction',
-                       'Registros distintos da extração automática'),
-                    chart_path(output, '06_candidates_by_case_records'), COLORS['gray'])
+    values = [count for count, _ in rows]
+    labels = [f'{rank}. {label}' for rank, (_, label) in enumerate(rows, 1)]
+    positions = list(range(len(rows)))
+    podium = ['#D4A017', '#94A3B8', '#B87333']
+    point_colors = podium + ['#38A3A5'] * max(0, len(rows) - 3)
+    point_sizes = [105 if rank < 3 else 70 for rank in range(len(rows))]
+    fig, ax = plt.subplots(figsize=(11, max(7, len(rows) * .43)))
+    ax.hlines(positions, 0, values, color='#CBD5E1', linewidth=2)
+    ax.scatter(values, positions, s=point_sizes, color=point_colors,
+               edgecolor='white', linewidth=1.2, zorder=3)
+    ax.set_yticks(positions, labels)
+    ax.invert_yaxis()
+    ax.set_title(tr('Candidates with the most associated case records',
+                    'Candidatos com mais registros processuais associados'), loc='left')
+    ax.set_xlabel(tr('Distinct case records from automated extraction',
+                     'Registros distintos da extração automática'))
+    ax.grid(axis='x'); ax.set_axisbelow(True)
+    maximum = max(values, default=1)
+    for y, value in enumerate(values):
+        ax.text(value + maximum * .015, y, f'{value:,}', va='center',
+                fontweight='bold' if y < 3 else 'normal')
+    ax.set_xlim(0, maximum * 1.14)
+    save(fig, chart_path(output, '06_candidates_by_case_records'))
 
 
 def normalized_token(value):

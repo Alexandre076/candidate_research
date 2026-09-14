@@ -14,3 +14,4 @@ curl-cffi>=0.13,<1
 # Static charts, word clouds, and the generated insights report.
 matplotlib>=3.9,<4
 wordcloud>=1.9,<2
+squarify>=0.4,<1
