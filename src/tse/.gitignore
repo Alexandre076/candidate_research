@@ -7,3 +7,4 @@ data/pipeline/*
 !data/pipeline/preliminary_results/
 data/pipeline/preliminary_results/*
 !data/pipeline/preliminary_results/*.csv
+!data/pipeline/preliminary_results/CONCLUSAO.md

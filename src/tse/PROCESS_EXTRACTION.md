@@ -1,17 +1,17 @@
-# Extração orientada à contagem de processos
+# Case-count-oriented extraction
 
-## Pipeline completo
+## Complete pipeline
 
-Execute ou retome todas as etapas a partir da raiz do projeto:
+Run or resume every stage from the project root:
 
 ```bash
 .venv/bin/python src/tse/run_pipeline.py
 ```
 
-Use `status` para uma consulta somente local e `--no-download` para exigir que os
-ZIPs já estejam presentes em `src/tse/data/raw`.
+Use `status` for a local-only query and `--no-download` to require the ZIP files
+to be present in `src/tse/data/raw` already.
 
-## Execução local em lote
+## Local batch execution
 
 ```bash
 python -m pip install -r requirements.txt
@@ -19,43 +19,43 @@ python src/tse/pipeline.py
 python src/tse/ocr_pipeline.py
 ```
 
-OCR requer `tesseract-ocr` e `tesseract-ocr-por` instalados no sistema.
-Execute o OCR após o término do primeiro comando. A saída fica em `data/pipeline`:
-texto e diagnóstico por documento, `manifest.jsonl`, `candidates.csv`,
-`excluded.json` e `summary.json`. O OCR grava resultados separados em `ocr/`,
-sem substituir o texto nativo. Seus resultados ainda exigem avaliação de qualidade.
-Não classifica páginas vazias automaticamente como documentos negativos.
+OCR requires `tesseract-ocr` and `tesseract-ocr-por` to be installed on the
+system. Run OCR after the first command finishes. Output is written under
+`data/pipeline`: text and diagnostics per document, `manifest.jsonl`,
+`candidates.csv`, `excluded.json`, and `summary.json`. OCR writes separate results
+under `ocr/` without replacing native text. Its results still require quality
+assessment. It does not automatically classify empty pages as negative documents.
 
-O lote retoma a extração nativa por hash do PDF e versão do pipeline. O cadastro
-é cruzado novamente a cada execução; registros ausentes ou ambíguos ficam marcados.
-A tabela contém candidaturas com documentos locais, não todas as candidaturas do TSE.
-Uma imagem grande, isoladamente, não envia a página para OCR nesta etapa.
+The batch resumes native extraction based on the PDF hash and pipeline version.
+The registry is matched again on every run; missing or ambiguous records are
+flagged. The table contains candidates with local documents, not every TSE
+candidate. A large image alone does not send a page to OCR at this stage.
 
-**Os dois comandos acima são etapas locais.**
-Eles não chamam uma LLM, não geram descrições semânticas e não calculam
-o total de candidatos com processos. Células de contagem vazias significam pendência,
-nunca zero. O vínculo pelo nome do arquivo identifica quem enviou o documento;
-a atribuição de um processo exige comparar também as partes. O piloto de SC é
-um resultado separado e não é propagado como classificação dos demais arquivos.
+**The two commands above are local stages.** They do not call an LLM, generate
+semantic descriptions, or calculate the total number of candidates with cases.
+Empty count cells mean pending work, never zero. The file-name link identifies
+who submitted the document; assigning a case also requires comparing the parties.
+The Santa Catarina pilot is a separate result and is not propagated as a
+classification for other files.
 
 ### OpenAI Batch
 
-Após o OCR, execute `python src/tse/semantic_batch.py prepare` para preparar os
-arquivos de requisições sem enviar dados. Cada arquivo tem até 1.000 requisições
-e 40 MB; o limite de tokens enfileirados depende da conta OpenAI. O modelo padrão
-é `gpt-5-nano`, com esforço mínimo e saída JSON estruturada. Páginas longas são
-fragmentadas com sobreposição, sem descarte de conteúdo.
+After OCR, run `python src/tse/semantic_batch.py prepare` to prepare request files
+without sending data. Each file contains at most 1,000 requests and 40 MB; the
+queued-token limit depends on the OpenAI account. The default model is
+`gpt-5-nano`, with minimal reasoning effort and structured JSON output. Long pages
+are split into overlapping chunks without discarding content.
 
-Configure `OPENAI_API_KEY` no ambiente de execução ou no `.env` local ignorado
-pelo Git. Nunca grave a chave em um arquivo versionado.
-`python src/tse/semantic_batch.py submit` envia os arquivos e grava os IDs dos
-lotes. `python src/tse/semantic_batch.py collect` consulta os lotes e baixa saídas
-e erros disponíveis. Não reenvia arquivos que já tenham recibo. Se a conexão
-cair durante a criação do lote, confira os lotes na conta antes de repetir:
-o servidor pode ter aceitado uma operação cujo recibo local não foi salvo.
+Set `OPENAI_API_KEY` in the execution environment or in the local `.env` ignored
+by Git. Never store the key in a versioned file.
+`python src/tse/semantic_batch.py submit` uploads the files and saves batch IDs.
+`python src/tse/semantic_batch.py collect` checks batches and downloads available
+outputs and errors. It does not resubmit files that already have a receipt. If
+the connection fails while creating a batch, check the batches in the account
+before retrying: the server may have accepted an operation whose local receipt
+was not saved.
 
-Para monitorar, baixar e reenviar todos os lotes automaticamente a cada minuto,
-execute na raiz do projeto:
+To monitor, download, and resubmit every batch automatically once per minute, run:
 
 ```bash
 .venv/bin/python src/tse/semantic_batch.py watch \
@@ -63,13 +63,13 @@ execute na raiz do projeto:
   --interval 60
 ```
 
-O comando retoma a execução pelos recibos existentes. Ele mantém apenas um lote
-reenviado por vez para respeitar o limite de tokens enfileirados, baixa cada
-resultado com gravação atômica e gera `validated.jsonl` quando todos terminarem.
-Pode ser interrompido com `Ctrl+C` e executado novamente sem perder o progresso.
+The command resumes from existing receipts. It keeps only one resubmitted batch
+at a time to respect the queued-token limit, downloads each result atomically,
+and generates `validated.jsonl` after everything finishes. You can stop it with
+`Ctrl+C` and run it again without losing progress.
 
-Depois da triagem com nano, prepare a revisão com mini dos documentos positivos,
-inconclusivos, ilegíveis, fragmentados ou com erro/inconsistência:
+After nano triage, prepare a mini review for positive, inconclusive, unreadable,
+fragmented, or erroneous/inconsistent documents:
 
 ```bash
 .venv/bin/python src/tse/semantic_batch.py prepare \
@@ -79,113 +79,105 @@ inconclusivos, ilegíveis, fragmentados ou com erro/inconsistência:
   --selection-from src/tse/data/pipeline/batch_stage1_nano_v2/validated.jsonl
 ```
 
-Em seguida, use `watch` nessa nova pasta. A seleção exclui negativos e documentos
-somente cíveis que passaram sem inconsistências na primeira etapa.
+Then use `watch` on this new directory. Selection excludes negative and civil-only
+documents that passed the first stage without inconsistencies.
 
-Para monitorar, baixar e reenviar todos os lotes automaticamente a cada minuto,
-execute na raiz do projeto:
+Batch processing has a completion window of up to 24 hours. Pricing, model
+availability, and account limits can change; consult the current OpenAI pricing
+and API documentation before running a large job.
 
-```bash
-.venv/bin/python src/tse/semantic_batch.py watch \
-  --output src/tse/data/pipeline/batch_stage1_nano_v2 \
-  --interval 60
-```
+Responses are extraction proposals. Semantic validation, evidence checking, and
+final consolidation by candidate must still run; the collector does not convert
+raw responses into confirmed counts.
 
-O comando retoma a execução pelos recibos existentes. Ele mantém apenas um lote
-reenviado por vez para respeitar o limite de tokens enfileirados, baixa cada
-resultado com gravação atômica e gera `validated.jsonl` quando todos terminarem.
-Pode ser interrompido com `Ctrl+C` e executado novamente sem perder o progresso.
+Scope: identify criminal records, including inquiries and cases without a
+conviction. Preserve civil and electoral mentions separately. Do not infer a
+conviction, current status, or offense from the mere existence of a case.
 
-O desconto Batch é 50%, com janela de até 24h. Preços consultados em 07/09/2026:
-GPT-5 nano padrão US$ 0,05/M entrada e US$ 0,40/M saída, antes do desconto.
-Disponibilidade e limites da conta não foram testados sem credencial.
-
-As respostas são propostas de extração. A validação semântica, conferência das
-evidências e consolidação final por candidato ainda precisam ser executadas;
-o coletor não transforma respostas brutas em contagens confirmadas.
-
-Escopo: identificar registros criminais, incluindo inquéritos e processos sem
-condenação. Preservar menções cíveis e eleitorais separadamente. Não inferir
-condenação, situação atual ou crime a partir da simples existência de autos.
-
-## Primeira triagem executável
+## First executable triage
 
 ```bash
 python src/tse/triage_processes.py
 ```
 
-Lê o manifesto e os textos da amostra. Produz `documents.jsonl` e `summary.json`
-em `src/tse/data/process_triage_sample`. Use `--output-dir` para outra execução.
-Não requer bibliotecas adicionais e não faz chamadas de LLM.
+Reads the sample manifest and text. Produces `documents.jsonl` and `summary.json`
+under `src/tse/data/process_triage_sample`. Use `--output-dir` for another run.
+It requires no additional libraries and makes no LLM calls.
 
-Agrupa menções de números no formato CNJ, inclusive com quebra de linha e
-separador ponto, e guarda todas as ocorrências com página e trecho. Não valida
-dígitos verificadores, não identifica números antigos e não distingue sozinho
-processos principais de referências, recursos ou precedentes. Ausência de número
-detectado não significa certidão negativa. Campos rotulados de assunto/classe
-são sinais da página, sem atribuição automática a um processo.
+It groups mentions of CNJ-format numbers, including line breaks and dot
+separators, and stores every occurrence with its page and excerpt. It does not
+validate check digits, identify old-format numbers, or distinguish primary cases
+from references, appeals, or precedents by itself. The absence of a detected
+number does not mean a negative certificate. Labeled subject/class fields are
+page-level signals and are not automatically assigned to a case.
 
-## Estrutura a preencher na revisão ou extração semântica
+## Structure populated during review or semantic extraction
 
-Cada documento mantém nome, hash, UF, alertas de leitura, classificação e menções.
-Cada menção contém número normalizado, evidências, natureza, vínculo com a pessoa,
-assunto literal, situação processual e decisão de inclusão na contagem.
+Each document retains its name, hash, state, reading alerts, classification, and
+mentions. Each mention contains a normalized number, evidence, nature,
+relationship to the person, literal subject, procedural status, and inclusion
+decision.
 
 - `nature`: `criminal`, `civil`, `electoral_noncriminal`, `administrative`, `unknown`.
-- `candidate_relationship`: investigado, acusado/réu, condenado, vítima, autor,
-  terceiro, mera referência ou vínculo não verificado. Registrar evidência do papel.
-- `subject`: assunto/crime conforme o documento; `null` quando não informado.
-- `procedural_status`: situação na data do documento; `null` quando não informada.
-- `include_in_count`: `true` só após confirmar natureza criminal e vínculo pertinente;
-  `false` para exclusões justificadas; `null` enquanto houver dúvida.
+- `candidate_relationship`: investigated, accused/defendant, convicted, victim,
+  plaintiff, third party, reference only, or unverified relationship. Record
+  evidence for the role.
+- `subject`: subject/offense as written in the document; `null` when absent.
+- `procedural_status`: status on the document date; `null` when absent.
+- `include_in_count`: `true` only after confirming criminal nature and a relevant
+  relationship; `false` for justified exclusions; `null` while uncertain.
 
-O identificador extraído do nome do arquivo é provisório: confirmar contra cadastro
-do TSE antes de preencher `candidate_id` e `candidate_name`. A busca inicial no
-portal do TSE não confirmou a convenção do nome de arquivo. Não usar o primeiro
-nome de pessoa encontrado no texto: pode ser magistrado, advogado ou outra parte.
+The identifier extracted from the file name is provisional: confirm it against
+the TSE registry before populating `candidate_id` and `candidate_name`. Do not use
+the first person's name found in the text; it may belong to a judge, lawyer, or
+another party.
 
-Para consolidar, deduplicar por candidato confirmado e número normalizado. Manter
-relações entre autos de origem, recursos e renumerações para não confundir quantidade
-de autos com quantidade de fatos. Sem número, não inventar unicidade. Certidão
-positiva sem identificação de autos tem contagem indeterminada. O total final deve
-explicitar cobertura, inconclusivos e documentos não lidos.
+For consolidation, deduplicate by confirmed candidate and normalized case number.
+Retain relationships among originating cases, appeals, and renumberings so the
+number of files is not confused with the number of facts. Without a number, do
+not invent uniqueness. A positive certificate without identified cases has an
+indeterminate count. The final total must disclose coverage, inconclusive items,
+and unread documents.
 
-## Validação inicial no texto da amostra
+## Initial validation against sample text
 
-Estas são verificações de conteúdo textual, não de autenticidade nem de vínculo
-com o cadastro eleitoral. Não houve revisão visual ou OCR.
+These checks concern textual content, not authenticity or the link to the
+electoral registry. No visual review or OCR was performed at this stage. Source
+excerpts remain in Portuguese because they are literal document evidence.
 
-| Documento | Página | Evidência | Interpretação para revisão |
+| Document | Page | Evidence | Review interpretation |
 |---|---|---|---|
-| AM/2026AM40002531443_40017126892.pdf.pdf | 1 | `Número: 1033757-26.2025.4.01.0000`; `Classe: INQUÉRITO POLICIAL`; `Assuntos: Apropriação indébita Previdenciária, Sonegação de contribuição previdenciária` | Registro criminal com assunto explícito; a página identifica um investigado. Confirmar vínculo cadastral antes de contar por candidato. |
-| DF/2026DF70002531335_70016842501.pdf.pdf | 1 | `Cumprimento de sentença, 0715405-49.2026.8.07.0003`; `Família.` | Cabeçalho positivo para ações cíveis e criminais, mas o registro listado é de família. O cabeçalho não basta para incluir no total criminal. |
-| RR/2026RR230002548834_230017133625.pdf.pdf | 1 | `0600458-12.2026.6.23.0000`; `Processo de Registro` / `de Candidatura` | Petição em registro de candidatura, não evidência de processo criminal. |
+| AM/2026AM40002531443_40017126892.pdf.pdf | 1 | `Número: 1033757-26.2025.4.01.0000`; `Classe: INQUÉRITO POLICIAL`; `Assuntos: Apropriação indébita Previdenciária, Sonegação de contribuição previdenciária` | Criminal record with an explicit subject; the page identifies an investigated person. Confirm the registry link before counting it for a candidate. |
+| DF/2026DF70002531335_70016842501.pdf.pdf | 1 | `Cumprimento de sentença, 0715405-49.2026.8.07.0003`; `Família.` | Positive header for civil and criminal actions, but the listed record concerns family law. The header alone is insufficient for inclusion in the criminal total. |
+| RR/2026RR230002548834_230017133625.pdf.pdf | 1 | `0600458-12.2026.6.23.0000`; `Processo de Registro` / `de Candidatura` | Petition in a candidate-registration case, not evidence of a criminal case. |
 
-Também foram encontrados números de processos de referência e autos citados no
-histórico. Por isso, os totais da triagem são de menções, não de processos atribuídos.
-Próximas etapas: revisar semanticamente os 135 documentos (inclusive sem números),
-resolver os alertas de leitura e confirmar vínculos antes de calcular candidatos.
+Reference case numbers and cases cited in procedural history were also found.
+Therefore, triage totals count mentions, not cases assigned to candidates. The
+next steps are semantic review of the 135 documents, including those without
+numbers, resolution of reading alerts, and confirmation of relationships before
+calculating candidate counts.
 
-## Piloto semântico de SC
+## Santa Catarina semantic pilot
 
-Resultado em `data/semantic_pilot/SC_240017134600.json`. É uma análise assistida
-nesta sessão, não um extrator semântico automatizado nem uma chamada de API.
-Foram inspecionados cabeçalho, encerramento e buscas no histórico. Cada evidência
-guarda página, trecho literal e offsets de caracteres no texto daquela página.
-Os trechos foram conferidos programaticamente contra o texto fonte.
+The result is stored at `data/semantic_pilot/SC_240017134600.json`. It is an
+assisted analysis from the exploratory session, not an automated semantic
+extractor or API call. The header, ending, and history search results were
+inspected. Each item of evidence stores its page, literal excerpt, and character
+offsets in that page's text. Excerpts were checked programmatically against the
+source text.
 
-A abertura identifica uma ação penal principal; a página 41 informa os assuntos.
-Números de 20 dígitos sem pontuação ampliam a lista de referências, preservadas
-separadamente. Não se presume que referências ou prefixos BNMP sejam processos
-independentes da pessoa. Os assuntos são do processo como um todo, não acusações
-individualizadas. Vínculo cadastral, situação processual e condenação permanecem
-sem conclusão. Os nomes listados como réus não são uma lista de candidatos.
+The opening identifies a primary criminal action; page 41 provides its subjects.
+Unpunctuated 20-digit numbers expand the reference list and remain separate.
+References and BNMP prefixes are not presumed to be independent cases involving
+the person. Subjects apply to the case as a whole and are not individualized
+accusations. The registry relationship, procedural status, and conviction remain
+unresolved. Names listed as defendants are not a list of candidates.
 
-Para automatizar com uma LLM, enviar blocos com páginas e manter a identificação
-do documento. Exigir evidências literais para cada campo, distinguir os assuntos
-do processo de imputações por pessoa e consolidar por número com referências
-separadas. Validar trechos e schema antes de aceitar resultados. A lista de réus
-de um bloco não pode ser atribuída a outro processo por proximidade. Blocos sem
-informação explícita devolvem campos nulos; ausência em um bloco não apaga
-evidência encontrada em outro. Nenhuma contagem por candidato é liberada sem
-confirmar o vínculo com o cadastro eleitoral.
+For LLM automation, send chunks with page numbers and retain document identity.
+Require literal evidence for every field, distinguish case subjects from charges
+against a person, and consolidate by number while keeping references separate.
+Validate excerpts and schema before accepting results. A defendant list from one
+chunk cannot be assigned to another case by proximity. Chunks without explicit
+information return null fields; absence in one chunk does not erase evidence from
+another. No candidate count is released before confirming the electoral registry
+relationship.

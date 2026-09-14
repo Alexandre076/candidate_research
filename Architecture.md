@@ -1,89 +1,87 @@
-# Arquitetura do pipeline de certidões do TSE
+# TSE certificate pipeline architecture
 
-O pipeline parte dos arquivos públicos do TSE, extrai texto nativo e OCR seletivo,
-cruza cada documento com o cadastro de candidaturas e usa duas etapas de análise
-semântica. A saída relaciona candidatos, documentos e processos. Um registro
-processual não implica culpa ou condenação.
+The pipeline starts from public TSE files, extracts native text and selective OCR,
+matches each document against the candidate registry, and runs two stages of
+semantic analysis. Its output links candidates, documents, and court cases. A
+case record does not imply guilt or conviction.
 
-## Execução unificada
+## Unified execution
 
-Na raiz do projeto, o pipeline completo pode ser iniciado ou retomado com:
+From the project root, start or resume the complete pipeline with:
 
 ```bash
 .venv/bin/python src/tse/run_pipeline.py
 ```
 
-O orquestrador verifica os artefatos de cada etapa e pula o que já estiver
-concluído. Ele baixa entradas ausentes, extrai os PDFs, executa o processamento
-local e o OCR, acompanha os batches, repara respostas truncadas e regenera as
-tabelas. `Ctrl+C` pode interromper o monitoramento; uma nova execução retoma pelos
-arquivos existentes.
+The orchestrator checks the artifacts from each stage and skips completed work.
+It downloads missing inputs, extracts PDFs, runs local processing and OCR,
+monitors batches, repairs truncated responses, and regenerates the tables.
+`Ctrl+C` can interrupt monitoring; another execution resumes from existing files.
 
-Para inspecionar o progresso sem acessar a API ou alterar arquivos:
+To inspect progress without accessing the API or modifying files:
 
 ```bash
 .venv/bin/python src/tse/run_pipeline.py status
 ```
 
-Quando os arquivos brutos já estiverem disponíveis e downloads externos não forem
-desejados:
+When raw files are already available and external downloads are not wanted:
 
 ```bash
 .venv/bin/python src/tse/run_pipeline.py --no-download
 ```
 
-## Fluxo principal executado
+## Main execution flow
 
 ```mermaid
 flowchart TD
-    ORCH["run_pipeline.py<br/>orquestra, verifica e retoma todas as etapas"]
-    TSE_CERT["TSE Dados Abertos<br/>27 ZIPs de certidões por UF"]
-    TSE_CAND["TSE Dados Abertos<br/>consulta_cand_2026.zip"]
-    DL["download.py<br/>baixa os ZIPs por UF"]
-    RAW_CERT["src/tse/data/raw<br/>ZIPs brutos de certidões"]
-    RAW_CAND["src/tse/data/raw/consulta_cand_2026.zip<br/>Cadastro bruto de candidatos"]
-    UNZIP["extract_certs.py<br/>extrai PDFs e organiza por UF"]
-    PDFS["src/tse/data/extracted/UF/*.pdf<br/>12.338 PDFs"]
-    FILTER{"Nome segue o padrão<br/>ano + UF + SQ_CANDIDATO<br/>+ SQ_DOCUMENTO?"}
-    EXCLUDED["27 leiame.pdf excluídos"]
-    NATIVE["pipeline.py + PyMuPDF<br/>texto nativo, páginas, hash e diagnóstico"]
-    REGISTRY["Leitura do cadastro<br/>chave: ano + UF + SQ_CANDIDATO"]
-    JOIN["Vínculo documento–candidato<br/>nome, cargo e partido"]
-    LOCAL["src/tse/data/pipeline<br/>12.311 documentos<br/>20.615 páginas<br/>5.757 candidatos"]
-    OCRQ{"Página com pouco texto<br/>ou caracteres inválidos?"}
-    OCR["ocr_pipeline.py<br/>Tesseract por, 200 dpi<br/>1.367 documentos"]
-    TEXT["Texto efetivo por página<br/>OCR substitui página nativa sinalizada"]
-    PREP1["semantic_batch.py prepare<br/>JSON Schema + candidato + páginas"]
-    NANO["Etapa 1 — GPT-5.4 nano<br/>12.311 requisições / 25 batches"]
-    VALID1["Validação local<br/>schema, resposta e citações literais"]
-    SELECT{"Positivo, inconclusivo,<br/>ilegível, fragmento,<br/>erro ou inconsistência?"}
-    SCREENED["Negativo ou somente cível<br/>dispensado da segunda leitura"]
-    PREP2["Seleção de 4.532 documentos"]
-    MINI["Etapa 2 — GPT-5.4 mini<br/>4.532 requisições / 11 batches"]
-    VALID2["Validação local das evidências<br/>4.520 respostas completas inicialmente"]
-    REPAIR["Reparo síncrono<br/>12 respostas truncadas;<br/>1 exigiu 30 mil tokens"]
-    OVERRIDE["Resultados de reparo<br/>substituem respostas incompletas"]
-    CONSOLIDATE["consolidate_results.py<br/>filtra vínculo criminal explícito<br/>e deduplica por candidato + processo"]
-    DOCS["documents_preliminary.csv<br/>uma linha por documento"]
-    PROCESSES["processes_preliminary.csv<br/>uma linha por candidato–processo"]
-    CANDIDATES["candidates_preliminary.csv<br/>contagens por candidato"]
-    SUMMARY["summary.json<br/>cobertura e totais"]
-    TYPES["process_type_report.py<br/>classes processuais normalizadas"]
-    SUBJECTS["crime_subject_report.py<br/>temas criminais normalizados"]
-    CONCLUSION["CONCLUSAO.md<br/>síntese automática"]
+    ORCH["run_pipeline.py<br/>orchestrates, checks, and resumes every stage"]
+    TSE_CERT["TSE Open Data<br/>27 certificate ZIP files by state"]
+    TSE_CAND["TSE Open Data<br/>consulta_cand_2026.zip"]
+    DL["download.py<br/>downloads ZIP files by state"]
+    RAW_CERT["src/tse/data/raw<br/>raw certificate ZIP files"]
+    RAW_CAND["src/tse/data/raw/consulta_cand_2026.zip<br/>raw candidate registry"]
+    UNZIP["extract_certs.py<br/>extracts PDFs and groups them by state"]
+    PDFS["src/tse/data/extracted/UF/*.pdf<br/>12,338 PDFs"]
+    FILTER{"Does the name follow the pattern<br/>year + state + SQ_CANDIDATO<br/>+ SQ_DOCUMENTO?"}
+    EXCLUDED["27 leiame.pdf files excluded"]
+    NATIVE["pipeline.py + PyMuPDF<br/>native text, pages, hash, and diagnostics"]
+    REGISTRY["Registry reader<br/>key: year + state + SQ_CANDIDATO"]
+    JOIN["Document–candidate link<br/>name, office, and party"]
+    LOCAL["src/tse/data/pipeline<br/>12,311 documents<br/>20,615 pages<br/>5,757 candidates"]
+    OCRQ{"Page with little text<br/>or invalid characters?"}
+    OCR["ocr_pipeline.py<br/>Tesseract por, 200 dpi<br/>1,367 documents"]
+    TEXT["Effective text by page<br/>OCR replaces flagged native pages"]
+    PREP1["semantic_batch.py prepare<br/>JSON Schema + candidate + pages"]
+    NANO["Stage 1 — GPT-5.4 nano<br/>12,311 requests / 25 batches"]
+    VALID1["Local validation<br/>schema, response, and literal citations"]
+    SELECT{"Positive, inconclusive,<br/>unreadable, fragment,<br/>error, or inconsistency?"}
+    SCREENED["Negative or civil only<br/>does not require the second review"]
+    PREP2["Selection of 4,532 documents"]
+    MINI["Stage 2 — GPT-5.4 mini<br/>4,532 requests / 11 batches"]
+    VALID2["Local evidence validation<br/>4,520 responses initially complete"]
+    REPAIR["Synchronous repair<br/>12 truncated responses;<br/>1 required 30,000 tokens"]
+    OVERRIDE["Repair results<br/>replace incomplete responses"]
+    CONSOLIDATE["consolidate_results.py<br/>filters explicit criminal links<br/>and deduplicates by candidate + case"]
+    DOCS["documents_preliminary.csv<br/>one row per document"]
+    PROCESSES["processes_preliminary.csv<br/>one row per candidate–case pair"]
+    CANDIDATES["candidates_preliminary.csv<br/>counts by candidate"]
+    SUMMARY["summary.json<br/>coverage and totals"]
+    TYPES["process_type_report.py<br/>normalized procedural classes"]
+    SUBJECTS["crime_subject_report.py<br/>normalized criminal subjects"]
+    CONCLUSION["CONCLUSAO.md<br/>automated summary"]
 
     TSE_CERT --> DL --> RAW_CERT --> UNZIP --> PDFS --> FILTER
     TSE_CAND --> RAW_CAND --> REGISTRY
-    FILTER -- "não" --> EXCLUDED
-    FILTER -- "sim" --> NATIVE
+    FILTER -- "no" --> EXCLUDED
+    FILTER -- "yes" --> NATIVE
     NATIVE --> JOIN
     REGISTRY --> JOIN --> LOCAL
     LOCAL --> OCRQ
-    OCRQ -- "sim" --> OCR --> TEXT
-    OCRQ -- "não" --> TEXT
+    OCRQ -- "yes" --> OCR --> TEXT
+    OCRQ -- "no" --> TEXT
     TEXT --> PREP1 --> NANO --> VALID1 --> SELECT
-    SELECT -- "não" --> SCREENED --> CONSOLIDATE
-    SELECT -- "sim" --> PREP2 --> MINI --> VALID2
+    SELECT -- "no" --> SCREENED --> CONSOLIDATE
+    SELECT -- "yes" --> PREP2 --> MINI --> VALID2
     VALID2 --> REPAIR --> OVERRIDE --> CONSOLIDATE
     VALID2 --> CONSOLIDATE
     CONSOLIDATE --> DOCS
@@ -94,103 +92,103 @@ flowchart TD
     PROCESSES --> SUBJECTS
     SUMMARY --> CONCLUSION
     SUBJECTS --> CONCLUSION
-    ORCH -. controla .-> DL
-    ORCH -. controla .-> NATIVE
-    ORCH -. controla .-> OCR
-    ORCH -. controla .-> PREP1
-    ORCH -. controla .-> PREP2
-    ORCH -. controla .-> REPAIR
-    ORCH -. controla .-> CONSOLIDATE
+    ORCH -. controls .-> DL
+    ORCH -. controls .-> NATIVE
+    ORCH -. controls .-> OCR
+    ORCH -. controls .-> PREP1
+    ORCH -. controls .-> PREP2
+    ORCH -. controls .-> REPAIR
+    ORCH -. controls .-> CONSOLIDATE
 ```
 
-## Ciclo de cada conjunto de batches
+## Lifecycle of each batch set
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Preparado: prepare
-    Preparado --> Submetido: upload JSONL
-    Submetido --> EmProcessamento: validating / in_progress
-    EmProcessamento --> Concluido: completed
-    EmProcessamento --> Reenvio: token limit / expired
-    Reenvio --> Submetido: fila disponível
-    Concluido --> Download: output_file_id
-    Download --> Validacao: validate
-    Validacao --> Reparo: incomplete / max_output_tokens
-    Reparo --> Validacao: resposta substituta
-    Validacao --> [*]: todas as respostas presentes
+    [*] --> Prepared: prepare
+    Prepared --> Submitted: upload JSONL
+    Submitted --> Processing: validating / in_progress
+    Processing --> Completed: completed
+    Processing --> Resubmission: token limit / expired
+    Resubmission --> Submitted: queue available
+    Completed --> Download: output_file_id
+    Download --> Validation: validate
+    Validation --> Repair: incomplete / max_output_tokens
+    Repair --> Validation: replacement response
+    Validation --> [*]: all responses present
 ```
 
-O modo `watch` consulta a API a cada minuto, baixa resultados de forma atômica,
-mantém um lote reenviado por vez para respeitar o limite de tokens da organização
-e retoma a partir dos recibos locais. Limite de crédito pausa o monitor sem apagar
-o progresso.
+The `watch` mode polls the API every minute, downloads results atomically, keeps
+one resubmitted batch at a time to respect the organization's queued-token limit,
+and resumes from local receipts. A credit limit pauses the monitor without
+deleting progress.
 
-## Responsabilidade de cada script
+## Script responsibilities
 
-| Script | Papel | Principais saídas |
+| Script | Role | Main outputs |
 |---|---|---|
-| `run_pipeline.py` | Orquestrar e retomar o fluxo completo | Todas as saídas abaixo |
-| `download.py` | Baixar ZIPs de certidões das 27 UFs | `certidao_criminal_2026_UF.zip` |
-| `extract_certs.py` | Extrair PDFs e organizar por UF | `data/extracted/UF/*.pdf` |
-| `analyze_pdfs.py` | Extrair e diagnosticar amostras durante a calibração | `processed_sample/` |
-| `triage_processes.py` | Detectar menções CNJ na amostra, sem atribuir processos | `process_triage_sample/` |
-| `pipeline.py` | Executar extração nativa completa e cruzar cadastro | `manifest.jsonl`, `texts/`, `documents/`, `candidates.csv`, `summary.json` |
-| `ocr_pipeline.py` | Fazer OCR somente nas páginas sinalizadas | `ocr/` |
-| `semantic_batch.py` | Preparar, submeter, monitorar, baixar e validar LLM | pastas `batch_*`, `validated.jsonl` |
-| `consolidate_results.py` | Aplicar reparos, filtrar registros e deduplicar | três CSVs e `summary.json` |
-| `process_type_report.py` | Normalizar classes processuais | `process_types_preliminary.csv` |
-| `crime_subject_report.py` | Normalizar causas e assuntos criminais | `crime_subjects_preliminary.csv` |
-| `generate_insights.py` | Gerar gráficos e painel HTML | `insights/` |
+| `run_pipeline.py` | Orchestrate and resume the complete flow | All outputs below |
+| `download.py` | Download certificate ZIP files for the 27 states | `certidao_criminal_2026_UF.zip` |
+| `extract_certs.py` | Extract PDFs and organize them by state | `data/extracted/UF/*.pdf` |
+| `analyze_pdfs.py` | Extract and diagnose samples during calibration | `processed_sample/` |
+| `triage_processes.py` | Detect CNJ mentions without assigning cases | `process_triage_sample/` |
+| `pipeline.py` | Run native extraction and match the registry | `manifest.jsonl`, `texts/`, `documents/`, `candidates.csv`, `summary.json` |
+| `ocr_pipeline.py` | Apply OCR only to flagged pages | `ocr/` |
+| `semantic_batch.py` | Prepare, submit, monitor, download, and validate LLM work | `batch_*` directories, `validated.jsonl` |
+| `consolidate_results.py` | Apply repairs, filter records, and deduplicate | Three CSVs and `summary.json` |
+| `process_type_report.py` | Normalize procedural classes | `process_types_preliminary.csv` |
+| `crime_subject_report.py` | Normalize criminal causes and subjects | `crime_subjects_preliminary.csv` |
+| `generate_insights.py` | Generate charts and the HTML dashboard | `insights/` |
 
-`analyze_pdfs.py` e `triage_processes.py` pertencem à fase exploratória. Eles
-ajudaram a definir os alertas de leitura, o schema e as regras, mas suas contagens
-não alimentam diretamente o resultado consolidado.
+`analyze_pdfs.py` and `triage_processes.py` belong to the exploratory phase. They
+helped define reading alerts, the schema, and the rules, but their counts do not
+feed the consolidated result directly.
 
-## Dados estruturados extraídos pela LLM
+## Structured data extracted by the LLM
 
-Cada documento recebe uma classificação: positivo criminal, negativo criminal,
-somente cível, ilegível, inconclusivo ou fragmento. Cada registro proposto contém:
+Each document receives one classification: positive criminal, negative criminal,
+civil only, unreadable, inconclusive, or fragment. Each proposed record contains:
 
-- número do processo;
-- papel do candidato;
-- natureza e classe processual;
-- tipo de menção, principal ou referência;
-- assuntos e abrangência dos assuntos;
-- situação processual e resultado, quando explícitos;
-- descrição breve;
-- evidências literais com número da página.
+- case number;
+- candidate's role;
+- nature and procedural class;
+- mention type, either primary or reference;
+- subjects and their scope;
+- procedural status and outcome, when explicit;
+- short description;
+- literal evidence with a page number.
 
-A validação local exige evidência do processo, evidência do vínculo quando marcado
-como explícito e evidência dos assuntos quando preenchidos. Ela verifica se cada
-citação aparece no texto enviado ao modelo. Essa validação confirma consistência
-estrutural e textual; não substitui revisão jurídica ou humana.
+Local validation requires evidence for the case, evidence for the relationship
+when marked explicit, and evidence for subjects when populated. It checks whether
+every citation appears in the text sent to the model. This confirms structural
+and textual consistency; it does not replace legal or human review.
 
-## Estado final desta execução
+## Final state of this run
 
-| Métrica | Valor |
+| Metric | Value |
 |---|---:|
-| PDFs encontrados | 12.338 |
-| PDFs informativos excluídos | 27 |
-| Documentos processados | 12.311 |
-| Páginas | 20.615 |
-| Chaves de candidato | 5.757 |
-| Documentos encaminhados ao mini | 4.532 |
-| Documentos pendentes após reparos | 0 |
-| Candidatos com registro automático | 588 |
-| Processos numerados por candidato | 1.482 |
-| Registros sem número | 12 |
+| PDFs found | 12,338 |
+| Informational PDFs excluded | 27 |
+| Documents processed | 12,311 |
+| Pages | 20,615 |
+| Candidate keys | 5,757 |
+| Documents sent to mini | 4,532 |
+| Documents pending after repairs | 0 |
+| Candidates with an automated record | 588 |
+| Numbered cases by candidate | 1,482 |
+| Records without a number | 12 |
 
-Os totais de candidatos e processos representam resultados automáticos. Um
-processo pode ser investigação, ação sem julgamento, recurso ou execução; sua
-presença não comprova condenação.
+Candidate and case totals represent automated results. A case may be an
+investigation, an action without judgment, an appeal, or an enforcement action;
+its presence does not prove a conviction.
 
-## Pontos técnicos a uniformizar
+## Technical points to standardize
 
-- `download.py` e `extract_certs.py` usam `data/...` relativo ao diretório de
-  execução; o restante usa `src/tse/data/...` derivado do caminho do script.
-- O ZIP `consulta_cand_2026.zip` é uma entrada adicional do cadastro e não é
-  baixado por `download.py`.
-- Os reparos da etapa 2 precisam ser informados como `--override` ao executar a
-  consolidação.
-- Os nomes `preliminary` foram preservados porque a análise não passou por revisão
-  humana, embora a cobertura técnica dos documentos esteja completa.
+- `download.py` and `extract_certs.py` use `data/...` relative to the execution
+  directory; the remaining scripts use `src/tse/data/...` derived from the script
+  path.
+- The `consulta_cand_2026.zip` ZIP is an additional registry input and is not
+  downloaded by `download.py`.
+- Stage 2 repairs must be supplied through `--override` when consolidation runs.
+- The `preliminary` names were retained because the analysis did not undergo
+  human review, although technical document coverage is complete.

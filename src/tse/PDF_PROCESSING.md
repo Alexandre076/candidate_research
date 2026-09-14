@@ -1,44 +1,44 @@
-# Diagnóstico inicial dos PDFs
+# Initial PDF diagnostics
 
-Requer Python 3.11+ e as dependências de `requirements.txt`.
-Na raiz do projeto, em um ambiente virtual:
+Requires Python 3.11+ and the dependencies from `requirements.txt`. From the
+project root, inside a virtual environment:
 
 ```bash
 python -m pip install -r requirements.txt
 python src/tse/analyze_pdfs.py
 ```
 
-Por padrão, seleciona até cinco PDFs por UF, com semente 42, e grava em
-`src/tse/data/processed_sample/`. Os caminhos padrão independem do diretório
-de execução. Para uma amostra maior, use uma nova pasta de saída:
+By default, the script selects up to five PDFs per state with seed 42 and writes
+results to `src/tse/data/processed_sample/`. Default paths do not depend on the
+execution directory. For a larger sample, use a new output directory:
 
 ```bash
 python src/tse/analyze_pdfs.py --sample-per-uf 20 --output-dir src/tse/data/processed_sample_20
 ```
 
-Para analisar a base toda, use `--sample-per-uf 0` e outra pasta de saída.
-A CLI recusa uma pasta de saída não vazia para preservar execuções anteriores.
+To analyze the entire dataset, use `--sample-per-uf 0` and another output
+directory. The CLI rejects a nonempty output directory to preserve earlier runs.
 
-## Saídas
+## Outputs
 
-- `summary.json`: total de PDFs disponíveis, tamanho da amostra e contagens de diagnóstico.
-- `manifest.jsonl`: um registro por documento, com diagnóstico de cada página.
-- `<UF>/<nome original>.txt`: texto nativo com separadores de página.
-- `<UF>/<nome original>.metadata.json`: hash SHA-256, origem, método e indicadores por página.
+- `summary.json`: total available PDFs, sample size, and diagnostic counts.
+- `manifest.jsonl`: one record per document, including diagnostics for every page.
+- `<UF>/<original name>.txt`: native text with page separators.
+- `<UF>/<original name>.metadata.json`: SHA-256 hash, source, method, and page indicators.
 
-O status do documento indica sucesso técnico de leitura, não completude do
-conteúdo. Páginas com pouco texto, caracteres de substituição ou uma imagem
-ocupando pelo menos 60% da área recebem `review` e `ocr_candidate: true`.
-Páginas com erro são contadas separadamente e precisam de investigação.
-Uma página vazia também pode receber `review`. Uma camada de OCR já existente
-pode produzir texto e ainda assim merecer revisão pela presença de imagem grande.
-As regras são heurísticas; imagens em mosaico e texto incorretamente decodificado
-sem caracteres de substituição podem escapar. Não há garantia de ordem de leitura
-em layouts complexos. O script não executa OCR nem envia documentos para serviços.
+Document status indicates technical reading success, not content completeness.
+Pages with little text, replacement characters, or an image covering at least
+60% of the area receive `review` and `ocr_candidate: true`. Pages with errors are
+counted separately and require investigation. An empty page may also receive
+`review`. An existing OCR layer can produce text and still warrant review because
+of a large image. These rules are heuristic; tiled images and incorrectly decoded
+text without replacement characters may escape detection. Reading order is not
+guaranteed in complex layouts. The script does not perform OCR or send documents
+to services.
 
-## Próxima etapa
+## Next stage
 
-Inspecionar visualmente exemplos com `review` e `native_text`, calibrar as regras
-e adicionar OCR seletivo em português. Só então agrupar documentos por padrões
-de conteúdo e selecionar exemplos de cada família para sugerir e validar schemas.
-Uma amostra por UF é um ponto de partida, não garante cobertura de modelos raros.
+Visually inspect examples marked `review` and `native_text`, calibrate the rules,
+and add selective Portuguese OCR. Then group documents by content patterns and
+select examples from each family to propose and validate schemas. A sample by
+state is a starting point and does not guarantee coverage of rare templates.

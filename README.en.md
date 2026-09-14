@@ -210,7 +210,7 @@ src/tse/data/pipeline/preliminary_results/
 | `process_types_preliminary.csv` | Grouped and normalized procedural classes |
 | `crime_subjects_preliminary.csv` | Grouped subjects such as corruption and domestic violence |
 | `summary.json` | Coverage and aggregate counts |
-| `CONCLUSAO.md` | Portuguese summary of the development run |
+| `CONCLUSAO.md` | Automated English summary of the development run |
 | `insights/index.html` | Portuguese visual dashboard with the main automated insights |
 | `insights/index.en.html` | English version of the visual dashboard |
 | `insights/*.png` | Exportable charts used by the dashboard |
