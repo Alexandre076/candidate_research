@@ -16,6 +16,19 @@ The results support questions such as:
 A criminal record may be an inquiry, investigation, or case without a judgment.
 A candidate's presence in this dataset does not imply guilt or conviction.
 
+## Original data source
+
+The original candidate registry and criminal record certificate PDFs were
+downloaded from the Brazilian Superior Electoral Court (TSE) Open Data Portal,
+from the **Candidates — 2026** dataset. The official dataset page provides its
+metadata and the downloadable resources for each Brazilian state:
+
+**[TSE Open Data — Candidates 2026](https://dadosabertos.tse.jus.br/pt_BR/dataset/candidatos-2026)**
+
+The tables and dashboards in this repository are derived outputs produced by
+the automated extraction and analysis pipeline; they are not official TSE
+classifications.
+
 ## Overview
 
 ```mermaid

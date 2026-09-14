@@ -427,6 +427,8 @@ def write_html(output, metrics, regions):
 body{{font-family:Arial,sans-serif;margin:0;background:#f1f5f9;color:#172033}}
 main{{max-width:1200px;margin:auto;padding:32px}} h1{{margin-bottom:8px}}
 .note{{background:#fff7d6;border-left:5px solid #f4b942;padding:16px;margin:24px 0}}
+.source{{background:#eaf4fb;border-left:5px solid #22577a;padding:16px;margin:20px 0}}
+.source a{{color:#174d6d;font-weight:bold}}
 .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}}
 .card,section{{background:white;border-radius:10px;padding:18px;box-shadow:0 2px 8px #0f172a14}}
 .card strong{{display:block;font-size:30px;color:#22577a}} .card span{{color:#526175}}
@@ -438,6 +440,10 @@ th,td{{padding:9px;text-align:right;border-bottom:1px solid #e2e8f0}} th:first-c
 </style></head><body><main><h1>{tr('TSE certificate analysis', 'Análise das certidões do TSE')}</h1>
 <p>{tr('Automated insights from candidate-submitted criminal record certificates.', 'Insights automáticos das certidões criminais apresentadas pelos candidatos.')}</p>
 <p><a href="{tr('index.html', 'index.en.html')}">{tr('Ver em português', 'View in English')}</a></p>
+<div class="source"><strong>{tr('Original data source:', 'Fonte dos dados originais:')}</strong>
+{tr('the candidate registry and criminal record certificate PDFs were obtained from the Brazilian Superior Electoral Court (TSE) Open Data Portal. View the official', 'o cadastro de candidatos e as certidões criminais em PDF foram obtidos no Portal de Dados Abertos do Tribunal Superior Eleitoral (TSE). Consulte o conjunto oficial')}
+<a href="https://dadosabertos.tse.jus.br/pt_BR/dataset/candidatos-2026" target="_blank" rel="noopener noreferrer">{tr('Candidates — 2026 dataset', 'Candidatos — 2026')}</a>.
+{tr('This dashboard contains derived automated analyses and is not an official TSE classification.', 'Este painel contém análises automáticas derivadas e não constitui uma classificação oficial do TSE.')}</div>
 <div class="note"><strong>{tr('Interpretation:', 'Interpretação:')}</strong>
 {tr('a case record may be an inquiry, investigation, appeal, or case without judgment. It does not imply guilt or conviction. Subjects may apply to the case as a whole rather than to an individual candidate.', 'um registro pode ser inquérito, investigação, recurso ou processo sem julgamento. Ele não implica culpa ou condenação. Os assuntos podem se aplicar ao processo como um todo, e não individualmente ao candidato.')}</div>
 <div class="cards">{cards}</div><div class="charts">{figures}</div>
