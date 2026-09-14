@@ -180,6 +180,8 @@ def run(args):
                       results / 'process_types_preliminary.csv')
     build_subject_report(results / 'processes_preliminary.csv',
                          results / 'crime_subjects_preliminary.csv')
+    from generate_insights import generate as generate_insights
+    generate_insights(results, results / 'insights')
     print(f'[done] Resultados em {results}')
 
 

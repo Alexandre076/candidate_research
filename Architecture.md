@@ -140,6 +140,7 @@ o progresso.
 | `consolidate_results.py` | Aplicar reparos, filtrar registros e deduplicar | três CSVs e `summary.json` |
 | `process_type_report.py` | Normalizar classes processuais | `process_types_preliminary.csv` |
 | `crime_subject_report.py` | Normalizar causas e assuntos criminais | `crime_subjects_preliminary.csv` |
+| `generate_insights.py` | Gerar gráficos e painel HTML | `insights/` |
 
 `analyze_pdfs.py` e `triage_processes.py` pertencem à fase exploratória. Eles
 ajudaram a definir os alertas de leitura, o schema e as regras, mas suas contagens

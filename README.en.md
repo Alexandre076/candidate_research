@@ -198,6 +198,10 @@ src/tse/data/pipeline/preliminary_results/
 | `crime_subjects_preliminary.csv` | Grouped subjects such as corruption and domestic violence |
 | `summary.json` | Coverage and aggregate counts |
 | `CONCLUSAO.md` | Portuguese summary of the development run |
+| `insights/index.html` | Portuguese visual dashboard with the main automated insights |
+| `insights/index.en.html` | English version of the visual dashboard |
+| `insights/*.png` | Exportable charts used by the dashboard |
+| `insights/regional_summary.csv` | Candidate counts and rates by Brazilian region |
 
 CSV files use UTF-8 with a byte order mark to make Brazilian Portuguese text
 easier to open correctly in Excel.
