@@ -11,5 +11,6 @@ openai>=2,<3
 # TSE downloads with browser-compatible TLS impersonation.
 curl-cffi>=0.13,<1
 
-# Static charts and the generated insights report.
+# Static charts, word clouds, and the generated insights report.
 matplotlib>=3.9,<4
+wordcloud>=1.9,<2

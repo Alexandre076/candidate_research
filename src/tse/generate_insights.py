@@ -5,7 +5,9 @@ import csv
 from collections import Counter
 import os
 from pathlib import Path
+import re
 import tempfile
+import unicodedata
 
 os.environ.setdefault('MPLCONFIGDIR', str(Path(tempfile.gettempdir()) /
                                           'candidate-research-matplotlib'))
@@ -14,6 +16,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
+from wordcloud import WordCloud
 
 
 DATA = Path(__file__).resolve().parent / 'data/pipeline/preliminary_results'
@@ -71,6 +74,28 @@ TYPE_LABELS = {
     'Petição criminal': 'Criminal petition',
     'Medida protetiva de urgência': 'Emergency protective measure',
     'Execução penal ou da pena': 'Sentence enforcement',
+}
+
+DESCRIPTION_STOPWORDS = {
+    'acao', 'acoes', 'acusado', 'assunto', 'assuntos', 'autos', 'candidato',
+    'candidata', 'classe', 'criminal', 'criminais', 'crime', 'crimes', 'descricao',
+    'informada', 'informado', 'informados', 'judicial', 'numero', 'penal', 'polo',
+    'passivo', 'procedimento', 'processo', 'processos', 'reu', 'situacao',
+    'sobre', 'contra', 'consta', 'constam', 'conforme', 'trata', 'grau', 'instancia',
+    'artigo', 'inciso', 'caput', 'termos', 'parte', 'partes', 'relacao', 'registro',
+    'sem', 'com', 'dos', 'das', 'uma', 'para', 'pela', 'pelo', 'que', 'nao', 'nos',
+    'nas', 'por', 'seu', 'sua', 'aos', 'ainda', 'atualmente', 'encontra', 'foram',
+    'apelacao', 'apelado', 'apelante', 'arquivada', 'arquivado', 'arquivados',
+    'arquivamento', 'autor', 'baixa', 'baixado', 'carta', 'certidao', 'como',
+    'competencia', 'decisao', 'definitiva', 'definitivamente', 'denunciado',
+    'declarado', 'declarante', 'distribuicao', 'distribuido', 'execucao', 'executado',
+    'extincao', 'extinta', 'extinto', 'fase', 'fato', 'figura', 'geral', 'gerais',
+    'indiciado', 'indicado', 'investigado', 'inquerito', 'julgado', 'julgamento',
+    'medidas', 'ordinario', 'papel',
+    'peticao', 'policial', 'precatoria', 'prazo', 'procedimental', 'processual',
+    'querelado', 'recebida', 'recurso', 'registrada', 'remessa', 'requerido',
+    'resultado', 'status', 'sentenca', 'sumario', 'sumarissimo', 'termo', 'transito',
+    'tramitacao', 'vinculacao', 'vinculado',
 }
 
 
@@ -293,6 +318,38 @@ def candidate_names_chart(candidates, output):
                     chart_path(output, '06_candidates_by_case_records'), COLORS['gray'])
 
 
+def normalized_token(value):
+    return ''.join(character for character in unicodedata.normalize('NFD', value.lower())
+                   if unicodedata.category(character) != 'Mn')
+
+
+def description_wordcloud(processes, candidates, output):
+    candidate_words = {
+        normalized_token(word)
+        for row in candidates for word in re.findall(r"[A-Za-zÀ-ÿ]+", row['nome'])
+        if len(word) >= 4
+    }
+    frequencies = Counter()
+    for row in processes:
+        for raw_word in re.findall(r"[A-Za-zÀ-ÿ]+", row.get('descricao', '')):
+            word = normalized_token(raw_word)
+            if (len(word) >= 4 and word not in DESCRIPTION_STOPWORDS
+                    and word not in candidate_words):
+                frequencies[word] += 1
+    cloud = WordCloud(
+        width=1600, height=760, background_color='white', colormap='viridis',
+        max_words=100, prefer_horizontal=.88, relative_scaling=.45,
+        random_state=42, collocations=False, margin=5,
+    ).generate_from_frequencies(frequencies)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.imshow(cloud, interpolation='bilinear')
+    ax.axis('off')
+    ax.set_title(tr('Recurring terms in criminal case descriptions (original Portuguese)',
+                    'Termos recorrentes nas descrições dos processos criminais'),
+                 loc='left', pad=14)
+    save(fig, chart_path(output, '07_description_wordcloud'))
+
+
 def write_html(output, metrics, regions):
     cards = ''.join(
         f'<div class="card"><strong>{value}</strong><span>{label}</span></div>'
@@ -313,6 +370,7 @@ def write_html(output, metrics, regions):
         (tr('Criminal subjects', 'Assuntos criminais'), chart_path(output, '04_criminal_subjects').name),
         (tr('Procedural classes', 'Classes processuais'), chart_path(output, '05_process_types').name),
         (tr('Candidates by associated case records', 'Candidatos por registros associados'), chart_path(output, '06_candidates_by_case_records').name),
+        (tr('Recurring terms in case descriptions', 'Termos recorrentes nas descrições'), chart_path(output, '07_description_wordcloud').name),
     ]
     figures = ''
     for title, filename in charts:
@@ -363,6 +421,7 @@ def generate(input_dir, output):
         regions = regional_chart(candidates, processes, output)
         subject_chart(subjects, output); process_type_chart(types, output)
         candidate_names_chart(candidates, output)
+        description_wordcloud(processes, candidates, output)
         metrics = [
             (f'{len(documents):,}', tr('documents analyzed', 'documentos analisados')),
             (f'{len(candidates):,}', tr('candidates analyzed', 'candidatos analisados')),
