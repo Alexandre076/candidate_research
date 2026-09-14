@@ -341,13 +341,8 @@ def candidate_names_chart(candidates, output):
     values = [count for count, _ in rows]
     labels = [f'{rank}. {label}' for rank, (_, label) in enumerate(rows, 1)]
     positions = list(range(len(rows)))
-    podium = ['#D4A017', '#94A3B8', '#B87333']
-    point_colors = podium + ['#38A3A5'] * max(0, len(rows) - 3)
-    point_sizes = [105 if rank < 3 else 70 for rank in range(len(rows))]
     fig, ax = plt.subplots(figsize=(11, max(7, len(rows) * .43)))
-    ax.hlines(positions, 0, values, color='#CBD5E1', linewidth=2)
-    ax.scatter(values, positions, s=point_sizes, color=point_colors,
-               edgecolor='white', linewidth=1.2, zorder=3)
+    ax.barh(positions, values, color=COLORS['teal'], height=.68, alpha=.92)
     ax.set_yticks(positions, labels)
     ax.invert_yaxis()
     ax.set_title(tr('Candidates with the most associated case records',
@@ -358,7 +353,7 @@ def candidate_names_chart(candidates, output):
     maximum = max(values, default=1)
     for y, value in enumerate(values):
         ax.text(value + maximum * .015, y, f'{value:,}', va='center',
-                fontweight='bold' if y < 3 else 'normal')
+                fontweight='bold')
     ax.set_xlim(0, maximum * 1.14)
     save(fig, chart_path(output, '06_candidates_by_case_records'))
 
