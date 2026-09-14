@@ -15,6 +15,7 @@ import matplotlib
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 from wordcloud import WordCloud
 
 
@@ -248,7 +249,10 @@ def regional_chart(candidates, processes, output):
                      for column in range(4)]
     normalized = [[value / column_maxima[column] if column_maxima[column] else 0
                    for column, value in enumerate(row)] for row in raw_values]
-    image = ax.imshow(normalized, cmap='YlGnBu', vmin=0, vmax=1, aspect='auto')
+    intensity_colors = LinearSegmentedColormap.from_list(
+        'regional_intensity', ['#DBEAFE', '#60A5FA', '#FCA5A5', '#B91C1C'])
+    image = ax.imshow(normalized, cmap=intensity_colors, vmin=0, vmax=1,
+                      aspect='auto')
     columns = [
         tr('Analyzed', 'Analisados'), tr('With records', 'Com registros'),
         tr('Rate', 'Proporção'), tr('Case records', 'Registros processuais'),
