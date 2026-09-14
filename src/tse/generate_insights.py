@@ -114,6 +114,24 @@ def horizontal_bars(labels, values, title, xlabel, path, color):
     save(fig, path)
 
 
+def lollipop_chart(labels, values, title, xlabel, path, color):
+    fig, ax = plt.subplots(figsize=(10, max(5, len(labels) * .43)))
+    positions = list(range(len(labels)))
+    ax.hlines(positions, 0, values, color='#CBD5E1', linewidth=2.2)
+    ax.scatter(values, positions, color=color, s=75, zorder=3,
+               edgecolor='white', linewidth=1)
+    ax.set_yticks(positions, labels)
+    ax.invert_yaxis()
+    ax.set_title(title, loc='left')
+    ax.set_xlabel(xlabel)
+    ax.grid(axis='x'); ax.set_axisbelow(True)
+    maximum = max(values, default=1)
+    for y, value in enumerate(values):
+        ax.text(value + maximum * .015, y, f'{value:,}', va='center', fontsize=9)
+    ax.set_xlim(0, maximum * 1.15)
+    save(fig, path)
+
+
 def document_classification_chart(documents, output):
     labels_en = {
         'negative_criminal': 'Negative criminal certificate',
@@ -130,11 +148,27 @@ def document_classification_chart(documents, output):
     labels = labels_pt if LANGUAGE == 'pt' else labels_en
     counts = Counter(row['classificacao'] for row in documents)
     ordered = sorted(counts, key=counts.get, reverse=True)
-    horizontal_bars([labels.get(key, key) for key in ordered],
-                    [counts[key] for key in ordered],
-                    tr('Document classification', 'Classificação dos documentos'),
-                    tr('Documents', 'Documentos'),
-                    chart_path(output, '01_document_classification'), COLORS['blue'])
+    names = [labels.get(key, key) for key in ordered]
+    values = [counts[key] for key in ordered]
+    palette = [COLORS['blue'], COLORS['red'], COLORS['teal'], COLORS['yellow'],
+               COLORS['gray'], COLORS['green']][:len(values)]
+    fig, ax = plt.subplots(figsize=(10, 6.2))
+    wedges, _, autotexts = ax.pie(
+        values, startangle=90, counterclock=False, colors=palette,
+        wedgeprops={'width': .38, 'edgecolor': 'white', 'linewidth': 2},
+        autopct=lambda pct: f'{pct:.1f}%' if pct >= 2 else '', pctdistance=.8)
+    for text in autotexts:
+        text.set_fontsize(9); text.set_color('#172033')
+    ax.text(0, .08, f'{sum(values):,}', ha='center', va='center', fontsize=24,
+            fontweight='bold', color=COLORS['blue'])
+    ax.text(0, -.10, tr('documents', 'documentos'), ha='center', va='center',
+            color=COLORS['gray'])
+    legend_labels = [f'{name} — {value:,}' for name, value in zip(names, values)]
+    ax.legend(wedges, legend_labels, loc='center left', bbox_to_anchor=(.92, .5),
+              frameon=False)
+    ax.set_title(tr('Document classification', 'Classificação dos documentos'),
+                 loc='left', pad=18)
+    save(fig, chart_path(output, '01_document_classification'))
 
 
 def candidate_distribution_chart(candidates, output):
@@ -144,14 +178,19 @@ def candidate_distribution_chart(candidates, output):
     labels = [str(value) for value in range(1, 10)] + ['10+']
     values = [buckets[label] for label in labels]
     fig, ax = plt.subplots(figsize=(10, 5.5))
-    ax.bar(labels, values, color=COLORS['teal'])
+    positions = list(range(len(labels)))
+    ax.fill_between(positions, values, color=COLORS['teal'], alpha=.22)
+    ax.plot(positions, values, color=COLORS['teal'], linewidth=3, marker='o',
+            markersize=8, markeredgecolor='white', markeredgewidth=1.3)
+    ax.set_xticks(positions, labels)
     ax.set_title(tr('Case records per candidate with a record',
                     'Registros processuais por candidato com registro'), loc='left')
     ax.set_xlabel(tr('Distinct case records', 'Registros processuais distintos'))
     ax.set_ylabel(tr('Candidates', 'Candidatos'))
     ax.grid(axis='y'); ax.set_axisbelow(True)
     for x, value in enumerate(values):
-        ax.text(x, value + max(values) * .015, str(value), ha='center')
+        ax.text(x, value + max(values) * .025, str(value), ha='center')
+    ax.set_ylim(0, max(values) * 1.15)
     save(fig, chart_path(output, '02_cases_per_candidate'))
 
 
@@ -174,31 +213,32 @@ def regional_chart(candidates, processes, output):
         writer = csv.DictWriter(target, fieldnames=list(region_rows[0]))
         writer.writeheader(); writer.writerows(region_rows)
 
-    fig, (left, right) = plt.subplots(1, 2, figsize=(13, 5.5))
+    fig, ax = plt.subplots(figsize=(11, 6.2))
     names = [REGION_PT[row['region']] if LANGUAGE == 'pt' else row['region']
              for row in region_rows]
-    positions = range(len(names))
-    absolute = [row['candidates_with_records'] for row in region_rows]
+    analyzed = [row['candidates_analyzed'] for row in region_rows]
     rates = [row['candidate_rate'] for row in region_rows]
-    left.barh(list(positions), absolute, color=COLORS['blue'])
-    left.set_yticks(list(positions), names); left.invert_yaxis()
-    left.set_title(tr('Candidates with records', 'Candidatos com registros'), loc='left')
-    left.set_xlabel(tr('Candidates', 'Candidatos'))
-    left.grid(axis='x'); left.set_axisbelow(True)
-    for y, value in enumerate(absolute): left.text(value + 4, y, str(value), va='center')
-    left.set_xlim(0, max(absolute) * 1.18)
-    right.barh(list(positions), rates, color=COLORS['green'])
-    right.set_yticks(list(positions), names); right.invert_yaxis()
-    right.set_title(tr('Share among analyzed candidates',
-                       'Proporção entre candidatos analisados'), loc='left')
-    right.set_xlabel(tr('Candidate share', 'Proporção de candidatos'))
-    right.xaxis.set_major_formatter(PercentFormatter(1))
-    right.grid(axis='x'); right.set_axisbelow(True)
-    for y, value in enumerate(rates): right.text(value + .004, y, f'{value:.1%}', va='center')
-    right.set_xlim(0, max(rates) * 1.25)
-    fig.suptitle(tr('Criminal case records by Brazilian region',
-                    'Registros processuais criminais por região'), fontsize=16,
-                 fontweight='bold', x=.04, ha='left')
+    records = [row['candidate_case_records'] for row in region_rows]
+    sizes = [180 + value * 1.8 for value in records]
+    ax.scatter(analyzed, rates, s=sizes, color=COLORS['green'], alpha=.72,
+               edgecolor=COLORS['blue'], linewidth=1.5)
+    label_offsets = {
+        tr('South', 'Sul'): (-8, 8),
+        tr('Northeast', 'Nordeste'): (8, 8),
+    }
+    midpoint = (min(analyzed) + max(analyzed)) / 2
+    for name, x, y, record_count in zip(names, analyzed, rates, records):
+        offset = label_offsets.get(name, (-8, 8) if x > midpoint else (8, 8))
+        ax.annotate(f'{name}\n{record_count:,} {tr("records", "registros")}',
+                    (x, y), xytext=offset, textcoords='offset points', fontsize=9,
+                    ha='right' if offset[0] < 0 else 'left')
+    ax.set_title(tr('Regional scale, incidence, and case-record volume',
+                    'Escala, incidência e volume de registros por região'), loc='left')
+    ax.set_xlabel(tr('Candidates analyzed', 'Candidatos analisados'))
+    ax.set_ylabel(tr('Candidates with records', 'Candidatos com registros'))
+    ax.yaxis.set_major_formatter(PercentFormatter(1))
+    ax.grid(True); ax.set_axisbelow(True)
+    ax.margins(x=.06, y=.12)
     save(fig, chart_path(output, '03_regions'))
     return region_rows
 
@@ -226,7 +266,7 @@ def process_type_chart(types, output):
     rows = [row for row in types if row['fonte'] == 'revisado_mini']
     rows.sort(key=lambda row: integer(row['relacoes_candidato_processo']), reverse=True)
     rows = rows[:14]
-    horizontal_bars([(row['tipo_normalizado'] if LANGUAGE == 'pt' else
+    lollipop_chart([(row['tipo_normalizado'] if LANGUAGE == 'pt' else
                       TYPE_LABELS.get(row['tipo_normalizado'],
                                       row['tipo_normalizado'])) for row in rows],
                     [integer(row['relacoes_candidato_processo']) for row in rows],
@@ -245,7 +285,7 @@ def candidate_names_chart(candidates, output):
             rows.append((count, f'{row["nome"].title()} ({row["uf"]})'))
     rows.sort(key=lambda item: (-item[0], item[1]))
     rows = rows[:20]
-    horizontal_bars([label for _, label in rows], [count for count, _ in rows],
+    lollipop_chart([label for _, label in rows], [count for count, _ in rows],
                     tr('Candidates with the most associated case records',
                        'Candidatos com mais registros processuais associados'),
                     tr('Distinct case records from automated extraction',
