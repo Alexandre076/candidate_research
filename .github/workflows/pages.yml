@@ -1,0 +1,48 @@
+name: Deploy insights dashboard to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/tse/data/pipeline/preliminary_results/insights/index.html"
+      - "src/tse/data/pipeline/preliminary_results/insights/index.en.html"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare site
+        run: |
+          mkdir -p _site
+          cp src/tse/data/pipeline/preliminary_results/insights/index.html _site/index.html
+          cp src/tse/data/pipeline/preliminary_results/insights/index.en.html _site/index.en.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
