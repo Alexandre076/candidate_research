@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 import re
 import tempfile
-import textwrap
 import unicodedata
 
 os.environ.setdefault('MPLCONFIGDIR', str(Path(tempfile.gettempdir()) /
@@ -17,7 +16,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-import squarify
 from wordcloud import WordCloud
 
 
@@ -313,28 +311,24 @@ def process_type_chart(types, output):
                TYPE_LABELS.get(row['tipo_normalizado'], row['tipo_normalizado']))
               for row in rows]
     values = [integer(row['relacoes_candidato_processo']) for row in rows]
-    colors = []
-    for row in rows:
-        name = normalized_token(row['tipo_normalizado'])
-        if 'acao penal' in name or 'queixa' in name:
-            colors.append('#D1495B')
-        elif 'inquerito' in name or 'investig' in name:
-            colors.append('#38A3A5')
-        elif 'recurso' in name:
-            colors.append('#22577A')
-        elif any(term in name for term in ('carta', 'peticao', 'representacao')):
-            colors.append('#F4B942')
-        else:
-            colors.append('#64748B')
-    display_labels = [f'{textwrap.fill(label, 24)}\n{value:,}'
-                      for label, value in zip(labels, values)]
-    fig, ax = plt.subplots(figsize=(12, 7.2))
-    squarify.plot(sizes=values, label=display_labels, color=colors, alpha=.9,
-                  pad=True, ax=ax, text_kwargs={'fontsize': 8.5, 'color': 'white',
-                                                'fontweight': 'bold'})
-    ax.axis('off')
+    display_labels = [f'{rank}. {label}'
+                      for rank, label in enumerate(labels, 1)]
+    palette = list(plt.colormaps['tab20'].colors)
+    colors = [palette[(index * 3) % len(palette)] for index in range(len(rows))]
+    positions = list(range(len(rows)))
+    fig, ax = plt.subplots(figsize=(11, max(7, len(rows) * .55)))
+    ax.barh(positions, values, color=colors, height=.68, alpha=.92)
+    ax.set_yticks(positions, display_labels)
+    ax.invert_yaxis()
     ax.set_title(tr('Most frequent procedural classes',
-                    'Classes processuais mais frequentes'), loc='left', pad=16)
+                    'Classes processuais mais frequentes'), loc='left')
+    ax.set_xlabel(tr('Candidate–case records', 'Relações candidato–processo'))
+    ax.grid(axis='x'); ax.set_axisbelow(True)
+    maximum = max(values, default=1)
+    for y, value in enumerate(values):
+        ax.text(value + maximum * .012, y, f'{value:,}', va='center',
+                fontweight='bold')
+    ax.set_xlim(0, maximum * 1.14)
     save(fig, chart_path(output, '05_process_types'))
 
 
