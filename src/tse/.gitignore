@@ -1,1 +1,9 @@
-data/
+# Pipeline inputs and intermediate artifacts are generated locally.
+data/*
+
+# Publish only the consolidated CSV datasets used by the insights dashboard.
+!data/pipeline/
+data/pipeline/*
+!data/pipeline/preliminary_results/
+data/pipeline/preliminary_results/*
+!data/pipeline/preliminary_results/*.csv
