@@ -313,11 +313,9 @@ def process_type_chart(types, output):
     values = [integer(row['relacoes_candidato_processo']) for row in rows]
     display_labels = [f'{rank}. {label}'
                       for rank, label in enumerate(labels, 1)]
-    palette = list(plt.colormaps['tab20'].colors)
-    colors = [palette[(index * 3) % len(palette)] for index in range(len(rows))]
     positions = list(range(len(rows)))
     fig, ax = plt.subplots(figsize=(11, max(7, len(rows) * .55)))
-    ax.barh(positions, values, color=colors, height=.68, alpha=.92)
+    ax.barh(positions, values, color=COLORS['blue'], height=.68, alpha=.92)
     ax.set_yticks(positions, display_labels)
     ax.invert_yaxis()
     ax.set_title(tr('Most frequent procedural classes',
