@@ -390,14 +390,17 @@ main{{max-width:1200px;margin:auto;padding:32px}} h1{{margin-bottom:8px}}
 .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}}
 .card,section{{background:white;border-radius:10px;padding:18px;box-shadow:0 2px 8px #0f172a14}}
 .card strong{{display:block;font-size:30px;color:#22577a}} .card span{{color:#526175}}
-section{{margin-top:22px}} img{{width:100%;height:auto}} table{{width:100%;border-collapse:collapse}}
+.charts{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin-top:22px}}
+.charts section{{margin:0;min-width:0}} section{{margin-top:22px}} img{{width:100%;height:auto}}
+table{{width:100%;border-collapse:collapse}}
 th,td{{padding:9px;text-align:right;border-bottom:1px solid #e2e8f0}} th:first-child,td:first-child{{text-align:left}}
+@media (max-width:800px){{.charts{{grid-template-columns:1fr}} main{{padding:18px}}}}
 </style></head><body><main><h1>{tr('TSE certificate analysis', 'Análise das certidões do TSE')}</h1>
 <p>{tr('Automated insights from candidate-submitted criminal record certificates.', 'Insights automáticos das certidões criminais apresentadas pelos candidatos.')}</p>
 <p><a href="{tr('index.html', 'index.en.html')}">{tr('Ver em português', 'View in English')}</a></p>
 <div class="note"><strong>{tr('Interpretation:', 'Interpretação:')}</strong>
 {tr('a case record may be an inquiry, investigation, appeal, or case without judgment. It does not imply guilt or conviction. Subjects may apply to the case as a whole rather than to an individual candidate.', 'um registro pode ser inquérito, investigação, recurso ou processo sem julgamento. Ele não implica culpa ou condenação. Os assuntos podem se aplicar ao processo como um todo, e não individualmente ao candidato.')}</div>
-<div class="cards">{cards}</div>{figures}
+<div class="cards">{cards}</div><div class="charts">{figures}</div>
 <section><h2>{tr('Regional summary', 'Resumo regional')}</h2><table><thead><tr><th>{tr('Region', 'Região')}</th><th>{tr('Analyzed', 'Analisados')}</th>
 <th>{tr('With records', 'Com registros')}</th><th>{tr('Rate', 'Proporção')}</th><th>{tr('Case records', 'Registros processuais')}</th></tr></thead><tbody>{region_rows}</tbody></table></section>
 </main></body></html>'''
